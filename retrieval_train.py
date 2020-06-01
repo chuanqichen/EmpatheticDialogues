@@ -8,6 +8,7 @@
 #
 
 import logging
+import os
 import time
 
 import torch
@@ -89,6 +90,7 @@ def validate(
     epoch,
     model,
     data_loader,
+    is_shuffled,
     max_exs=100000,
     is_test=False,
     nb_candidates=100,
@@ -102,9 +104,15 @@ def validate(
     correct = 0
     all_context = []
     all_cands = []
+    all_next_sentences = []
     n_skipped = 0
     dtype = model.module.opt.dataset_name
     for i, ex in enumerate(data_loader):
+        if i == 0:
+            print('First context tensor:')
+            print(ex[0])
+            print('First "next" tensor:')
+            print(ex[1])
         batch_size = ex[0].size(0)
         if dtype == "reddit" and is_test and n_skipped < max_exs:
             n_skipped += batch_size
@@ -115,11 +123,12 @@ def validate(
             else field
             if field is not None
             else None
-            for field in ex
+            for field in ex[:2]
         ]
         ctx, cands = model(*params)
         all_context.append(ctx)
         all_cands.append(cands)
+        all_next_sentences.extend(ex[2])
         loss, nb_ok = loss_fn(ctx, cands)
         sum_losses += loss
         correct += nb_ok
@@ -129,14 +138,23 @@ def validate(
             break
     n_examples = 0
     if len(all_context) > 0:
+        set_string = 'test' if is_test else 'valid'
+        shuffle_string = 'shuffled' if is_shuffled else 'unshuffled'
+        save_path = os.path.join(os.getcwd(), f'{set_string}_candidate_groupings_{shuffle_string}.txt')
+        print(f'Saving candidate groupings to {save_path}.')
+        f = open(save_path, 'w')
         logging.info("Processing candidate top-K")
         all_context = torch.cat(all_context, dim=0)  # [:50000]  # [N, 2h]
         all_cands = torch.cat(all_cands, dim=0)  # [:50000]  # [N, 2h]
         acc_ranges = [1, 3, 10]
         n_correct = {r: 0 for r in acc_ranges}
+        i_grouping = 0
         for context, cands in list(
             zip(all_context.split(nb_candidates), all_cands.split(nb_candidates))
         )[:-1]:
+            next_sentences = all_next_sentences[nb_candidates*i_grouping:nb_candidates*(i_grouping+1)]
+            f.write('|'.join(next_sentences) + '\n')
+            i_grouping += 1
             _, top_answers = score_candidates(context, cands)
             n_cands = cands.size(0)
             gt_index = torch.arange(n_cands, out=top_answers.new(n_cands, 1))
@@ -156,6 +174,7 @@ def validate(
             )
             + f" | valid time = {valid_time:.2f} (s)"
         )
+        f.close()
         return avg_loss
     return 10
 
@@ -264,22 +283,22 @@ def main(opt_):
         with torch.no_grad():
             logging.info("Validating on the valid set -unshuffled")
             validate(
-                0, net, valid_data, is_test=False, nb_candidates=opt_.hits_at_nb_cands
+                0, net, valid_data, is_test=False, nb_candidates=opt_.hits_at_nb_cands, is_shuffled=False,
             )
             logging.info("Validating on the hidden test set -unshuffled")
             validate(
-                0, net, test_data, is_test=True, nb_candidates=opt_.hits_at_nb_cands
+                0, net, test_data, is_test=True, nb_candidates=opt_.hits_at_nb_cands, is_shuffled=False,
             )
         valid_data = env.build_valid_dataloader(True)
         test_data = env.build_valid_dataloader(True, test=True)
         with torch.no_grad():
             logging.info("Validating on the valid set -shuffle")
             validate(
-                0, net, valid_data, is_test=False, nb_candidates=opt_.hits_at_nb_cands
+                0, net, valid_data, is_test=False, nb_candidates=opt_.hits_at_nb_cands, is_shuffled=True,
             )
             logging.info("Validating on the hidden test set -shuffle")
             validate(
-                0, net, test_data, is_test=True, nb_candidates=opt_.hits_at_nb_cands
+                0, net, test_data, is_test=True, nb_candidates=opt_.hits_at_nb_cands, is_shuffled=True,
             )
     else:
         train_model(opt_)
