@@ -142,7 +142,7 @@ def validate(
         shuffle_string = 'shuffled' if is_shuffled else 'unshuffled'
         save_path = os.path.join(os.getcwd(), f'{set_string}_candidate_groupings_{shuffle_string}.txt')
         print(f'Saving candidate groupings to {save_path}.')
-        f = open(save_path, 'w')
+        f = open(save_path, 'w', encoding="utf8")
         logging.info("Processing candidate top-K")
         all_context = torch.cat(all_context, dim=0)  # [:50000]  # [N, 2h]
         all_cands = torch.cat(all_cands, dim=0)  # [:50000]  # [N, 2h]
