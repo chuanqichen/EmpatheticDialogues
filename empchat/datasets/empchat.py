@@ -132,17 +132,15 @@ class EmpDataset(Dataset):
         predictor = Predictor.from_archive(archive, 'constituency-parser')
         """
         for i in range(1, len(df)):
-        """
-            cands = []
-            if i%100==0:
-                print("i", i)
-            #masked = df[i - 1]
-            #masked = masked.replace("?",".")
-            #masked = masked.replace("!",".")
-            #cparts = masked.strip().split(",")
-
-        """
-
+            """
+                cands = []
+                if i%100==0:
+                    print("i", i)
+                #masked = df[i - 1]
+                #masked = masked.replace("?",".")
+                #masked = masked.replace("!",".")
+                #cparts = masked.strip().split(",")
+            """
             if add_constituency_parse_feature:
                 df_i_minus_1 = enrich_with_tag.enrich_text(df[i - 1])
                 df_i = enrich_with_tag.enrich_text(df[i])
@@ -151,29 +149,29 @@ class EmpDataset(Dataset):
             else:
                 cparts = df[i - 1].strip().split(",")
                 sparts = df[i].strip().split(",")
-        """
-            if len(sparts) == 9:
-                cands = sparts[8].split("|")
-                #cands = df[i - 1].split("|")
-            #print("cands", len(cands))
-            #pdb.set_trace()
-            to_predict = []
-            for cand in cands:
-                #if "?" in cand:
-                    curr_dict = {"sentence": cand}
-                    to_predict.append(curr_dict)
-                    #z = predictor.predict_json()
-            # https://github.com/allenai/allennlp/blob/32bccfbdaf97045f31861ab16bcfdefb8007c3f2/allennlp/predictors/predictor.py#L208
-            if len(to_predict) > 0:
-                ans = predictor.predict_batch_json(to_predict)
-                #print(z['trees'])
-            if i%100==0:
-                #print(z['trees'])
-                if ans and len(ans)>0:
-                    print(ans[0]['trees'])
-     
-            #pdb.set_trace()
-        """
+            """
+                if len(sparts) == 9:
+                    cands = sparts[8].split("|")
+                    #cands = df[i - 1].split("|")
+                #print("cands", len(cands))
+                #pdb.set_trace()
+                to_predict = []
+                for cand in cands:
+                    #if "?" in cand:
+                        curr_dict = {"sentence": cand}
+                        to_predict.append(curr_dict)
+                        #z = predictor.predict_json()
+                # https://github.com/allenai/allennlp/blob/32bccfbdaf97045f31861ab16bcfdefb8007c3f2/allennlp/predictors/predictor.py#L208
+                if len(to_predict) > 0:
+                    ans = predictor.predict_batch_json(to_predict)
+                    #print(z['trees'])
+                if i%100==0:
+                    #print(z['trees'])
+                    if ans and len(ans)>0:
+                        print(ans[0]['trees'])
+        
+                #pdb.set_trace()
+            """
             if cparts[0] == sparts[0]:
                 prevsent = cparts[5].replace("_comma_", ",")
                 history.append(prevsent)
